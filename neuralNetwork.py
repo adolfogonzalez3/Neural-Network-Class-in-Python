@@ -1,7 +1,14 @@
 import tensorflow as tf
+import numpy as np
 
+# level is the shape of the neural net
+# ex. a shape of [5, 2, 1]
+# this takes an input of 5, has a two hidden nodes, and one output node
+# dropoutProb is the probability that a node is dropped for each level
+# ex. a shape of [5, 2, 1] may have a dropoutProb of [ .6, .8, .5 ]
 class neuralNet:
 	def	__init__(self,level):
+		self.shape = level
 		# input is the patient's genes that are given to the neural network
 		self.input = tf.placeholder(tf.float32,[None,level[0]],name='Input')
 		# y_ = the true y for the patient only if training otherwise if testing no need to put y_
@@ -10,6 +17,7 @@ class neuralNet:
 		self.filter = tf.placeholder(tf.float32,[None,level[-1]],name='Mask')
 		self.weights = []
 		self.bias = []
+		self.dropoutProbList = []
 		left = level[0] #genes
 		self.y = self.input #genes are given to the input
 		i = 1
@@ -18,6 +26,9 @@ class neuralNet:
 			wght = tf.Variable(tf.random_normal([left,lvl],0,1),name=('wght'+str(i)))
 			bia = tf.Variable(tf.random_normal([lvl],0,1),name=('bias'+str(i)))
 			self.y = tf.sigmoid(tf.matmul(self.y,wght)+bia,name=('sigmoid'+str(i)))
+			keep_prob = tf.placeholder(tf.float32)
+			drop = tf.nn.dropout(wght,keep_prob)
+			self.dropoutProbList.append(keep_prob)
 			self.weights.append(wght)
 			self.bias.append(bia)
 			left = lvl
@@ -35,12 +46,34 @@ class neuralNet:
 		init = tf.initialize_all_variables()
 		self.sess = tf.Session()
 		self.sess.run(init)
-	def training_run(self,x,y,filt):
+	def training_run(self,x,y,filt = None,dropoutProb = None):
+		if dropoutProb == None:
+			dropoutProb = [1]*len(self.shape)
+		if filt == None:
+			filt = []
+			if len(np.shape(y)) == 1:
+				filt = [1]*self.shape[-1]
+			else:
+				filt = [[1]*self.shape[-1]]*len(y)
+		dictionary = {self.input: x, self.y_: y, self.filter: filt}
+		for dr,dp in zip(self.dropoutProbList,dropoutProb):
+			dictionary[dr] = dp
 		# does a training run
-		return self.sess.run([self.train_step,self.cross_entropy,self.y],feed_dict={self.input: x, self.y_: y, self.filter: filt})[1:]
-	def run(self,x,filt):
+		return self.sess.run([self.train_step,self.cross_entropy,self.y],feed_dict=dictionary)[1:]
+	def run(self,x,filt = None,dropoutProb = None):
+		if dropoutProb == None:
+			dropoutProb = [1]*len(self.shape)
+		if filt == None:
+			filt = []
+			if len(np.shape(x)) == 1:
+				filt = [1]*self.shape[-1]
+			else:
+				filt = [[1]*self.shape[-1]]*len(x)
+		dictionary = {self.input: x, self.filter: filt}
+		for dr,dp in zip(self.dropoutProbList,dropoutProb):
+			dictionary[dr] = dp
 		# returns a prediction for the patient
-		return self.sess.run(self.y,feed_dict={self.input: x,self.filter: filt})
+		return self.sess.run(self.y,feed_dict=dictionary)
 		
 		
 		
