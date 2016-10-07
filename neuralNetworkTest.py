@@ -88,71 +88,25 @@ def run_CV2(X,Y,machine,epochs,experiments=1,CVFolds=10):
 		for ind in range(len(epochs)):
 			results["accuracy"][ind].append(np.mean(resultsPerExper["accuracy"][ind]))
 	return {"accuracy":results["accuracy"]}
-		
-def run_CV(X,Y):
-	#if options == None:
-	#	options = {"NUMOFEPOCH":1000,
-	#####
-	# create the data sets
-	#####
-	neuralNet = nn.neuralNet([len(X[0]),1])
-	patientTotalDrugAcc = []
-	setsX, setsY = dp.create_dataset(X,Y,10)
-	cv = 0
-	for testX,testY,CV in zip(setsX,setsY,range(len(setsY))):
-		accuracyPerEpoch = []
-		fitPerEpoch = []
-		neuralNet.reset()
-		#print(neuralNet.get_weights())
-		#input()
-		#####
-		#
-		#####
-		trainX = np.concatenate([setsX[x] for x in range(len(setsX)) if x != CV])
-		trainY = fix_labels([[ele] for ele in itertools.chain(*[setsY[y] for y in range(len(setsY)) if y != CV ])])
-		testY = fix_labels([[i] for i in testY])
-		#####
-		#
-		#####
-		NUMOFEPOCHS = 1000
-		#fit, acc = neuralNet.training_run(trainX,trainY,dropoutProb=[1,.3,1])
-		neuralNet.training_run(trainX,trainY,epochs = NUMOFEPOCHS)
-		#####
-		#
-		#####
-		y = neuralNet.run(testX,testY)[1]
-		#####
-		cv += 1
-		patientTotalDrugAcc.append(100*y)
-	
-	return {"Mean":np.mean(patientTotalDrugAcc),"Standard Deviation":np.std(patientTotalDrugAcc)}
 
 def get_dataSet(drugIndex):
 	attr = [1] + [i for i in range(8,33)]
 	cellLine = dp.read_csv("Cell.Line.Database.dkim.v1.0.csv",';')
-	cellLine = list([np.array(rows)[attr] for rows in cellLine])
+	cellLine = dp.get_subset(cellLine, attr)
 	summary1 = dp.read_csv("Summary_P1_UTA.csv")
-	summary1 = [[summ[i] for i in range(len(summ)) if i != 1] for summ in summary1 if summ is not summary1[0]]
 	summary2 = dp.read_csv("Summary_P2_UTA.csv")
-	summary2 = [[summ[i] for i in range(len(summ)) if i != 1] for summ in summary2 if summ is not summary2[0]]
 	summary3 = dp.read_csv("Summary_P3_UTA.csv")
-	summary3 = [[summ[i] for i in range(len(summ)) if i != 1] for summ in summary3 if summ is not summary3[0]]
-	ID, summary = dp.union_matrices([summary1,summary2,summary3])
-	ID = [[i] for i in ID]
-	summary = np.concatenate((ID,summary),axis=1)
-	ID, matrices = dp.lineup_matrices([summary,cellLine],[0,0])
-	genes, drugEffectiveness = matrices
-	genes = [g[1:] for g in genes]
-	drugEffectiveness = [d[1:] for d in drugEffectiveness]
-	drugEffectiveness = [drug[drugIndex] for drug in drugEffectiveness]
-	genes, drugEffectiveness = remove_missing_rows(genes,drugEffectiveness)
-	genes = [[float(i) for i in g] for g in genes]
-	drugEffectiveness = [float(d) for d in drugEffectiveness]
-	drugEffectiveness = binarize(drugEffectiveness)
-	genes = dp.min_max(genes)
-	drugEffectiveness = fix_labels(drugEffectiveness)
-	return genes, drugEffectiveness
-
+	summary = dp.merge_data([summary1,summary2,summary3],"Cell Line")
+	summary = dp.get_subset(summary,["Sypro_Ruby_P1","Sypro_Ruby_P2","Sypro Ruby_P3"],indices = False,remove=True)
+	summaryGenes = summary["columns"]
+	cellLineDrugs = cellLine["columns"]
+	merged = dp.merge_data([summary,cellLine],"Cell Line")
+	summary = dp.get_subset(merged,summaryGenes,indices = False)
+	cellLine = dp.get_subset(merged,cellLineDrugs,indices = False)
+	print(cellLine["matrix"])
+	input()
+	print(summary["matrix"])
+	return [[float(i) for i in x[1:]] for x in summary["matrix"]],[[float(j) for j in y[1:]] for y in cellLine["matrix"]]
 
 with open("results.csv","w") as csv:
 	csv.write("Input nodes = 56,output node = 1\n")
