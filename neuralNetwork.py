@@ -23,8 +23,10 @@ class neuralNet:
 		i = 1
 		# create each layer of the neural network
 		for lvl in level[1:]:
-			wght = tf.Variable(tf.random_normal([left,lvl],0,1),name=('wght'+str(i)))
-			bia = tf.Variable(tf.random_normal([lvl],0,1),name=('bias'+str(i)))
+			#wght = tf.Variable(tf.random_normal([left,lvl],0,1),name=('wght'+str(i)))
+			wght = tf.Variable(tf.zeros([left,lvl]),name=('wght'+str(i)))
+			#bia = tf.Variable(tf.random_normal([lvl],0,1),name=('bias'+str(i)))
+			bia = tf.Variable(tf.zeros([lvl]),name=('bias'+str(i)))
 			self.y = tf.sigmoid(tf.matmul(self.y,wght)+bia,name=('sigmoid'+str(i)))
 			keep_prob = tf.placeholder(tf.float32)
 			drop = tf.nn.dropout(wght,keep_prob)
@@ -43,12 +45,18 @@ class neuralNet:
 		# and then adding all the incorrect values	( 0-1 = -1, 1-0=1) different
 		self.cross_entropy = tf.reduce_mean(tf.reduce_sum(abs(self.y_-self.y),reduction_indices=[1]))
 		self.train_step = tf.train.GradientDescentOptimizer(0.5).minimize(self.cross_entropy)
-		init = tf.initialize_all_variables()
+		correct_prediction = tf.equal(self.y_,tf.round(self.y))
+		self.accuracy = tf.reduce_mean(tf.cast(correct_prediction,tf.float32))
+		self.init = tf.initialize_all_variables()
 		self.sess = tf.Session()
-		self.sess.run(init)
-	def training_run(self,x,y,filt = None,dropoutProb = None):
+		self.sess.run(self.init)
+		#self.saver = tf.train.Saver()
+		#self.saver.save(self.sess,"sess.ckpt")
+	def training_run(self,x,y,filt = None,dropoutProb = None,epochs = None):
 		if dropoutProb == None:
 			dropoutProb = [1]*len(self.shape)
+		if epochs == None:
+			epochs = 1
 		if filt == None:
 			filt = []
 			if len(np.shape(y)) == 1:
@@ -59,8 +67,9 @@ class neuralNet:
 		for dr,dp in zip(self.dropoutProbList,dropoutProb):
 			dictionary[dr] = dp
 		# does a training run
-		return self.sess.run([self.train_step,self.cross_entropy,self.y],feed_dict=dictionary)[1:]
-	def run(self,x,filt = None,dropoutProb = None):
+		for i in range(epochs):
+			self.sess.run([self.train_step,self.y,self.cross_entropy,self.accuracy],feed_dict=dictionary)[1:]
+	def run(self,x,y,filt = None,dropoutProb = None):
 		if dropoutProb == None:
 			dropoutProb = [1]*len(self.shape)
 		if filt == None:
@@ -69,13 +78,16 @@ class neuralNet:
 				filt = [1]*self.shape[-1]
 			else:
 				filt = [[1]*self.shape[-1]]*len(x)
-		dictionary = {self.input: x, self.filter: filt}
+		dictionary = {self.input: x, self.filter: filt, self.y_: y}
 		for dr,dp in zip(self.dropoutProbList,dropoutProb):
 			dictionary[dr] = dp
 		# returns a prediction for the patient
-		return self.sess.run(self.y,feed_dict=dictionary)
-		
-		
+		return self.sess.run([self.y,self.accuracy],feed_dict=dictionary)
+	def reset(self):
+		#self.restore(self.sess,"sess.ckpt")
+		self.sess.run(self.init)
+	def get_weights(self):
+		return self.sess.run([self.weights[0]])
 		
 		
 		
