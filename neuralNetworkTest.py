@@ -91,8 +91,10 @@ def run_CV2(X,Y,machine,epochs,experiments=1,CVFolds=10):
 
 def get_dataSet(drugIndex):
 	attr = [1] + [i for i in range(8,33)]
-	cellLine = dp.read_csv("Cell.Line.Database.dkim.v1.0.csv",';')
+	cellLine = dp.read_csv("Cell.Line.Database.dkim.v1.0.csv",'@')
 	cellLine = dp.get_subset(cellLine, attr)
+	cellLine = dp.get_subset(cellLine,["Cell Line",cellLine["columns"][1]],indices = False,value='NA')
+	#print(np.shape(cellLine["matrix"]))
 	summary1 = dp.read_csv("Summary_P1_UTA.csv")
 	summary2 = dp.read_csv("Summary_P2_UTA.csv")
 	summary3 = dp.read_csv("Summary_P3_UTA.csv")
@@ -102,10 +104,12 @@ def get_dataSet(drugIndex):
 	cellLineDrugs = cellLine["columns"]
 	merged = dp.merge_data([summary,cellLine],"Cell Line")
 	summary = dp.get_subset(merged,summaryGenes,indices = False)
-	cellLine = dp.get_subset(merged,cellLineDrugs,indices = False)
-	print(cellLine["matrix"])
-	input()
-	print(summary["matrix"])
+	#print(cellLineDrugs)
+	#input()
+	cellLine = dp.get_subset(merged,[cellLineDrugs[1]],indices = False,value='NA')
+	#print(cellLine["matrix"])
+	#input()
+	#print(summary["matrix"])
 	return [[float(i) for i in x[1:]] for x in summary["matrix"]],[[float(j) for j in y[1:]] for y in cellLine["matrix"]]
 
 with open("results.csv","w") as csv:

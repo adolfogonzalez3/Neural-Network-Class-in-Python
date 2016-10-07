@@ -6,6 +6,9 @@ def read_csv(fileName,delimiter=","):
 	with open(fileName,"rt") as csv:
 		flag = False
 		for lines in csv:
+			lines = lines.replace(delimiter+delimiter,delimiter+"NA"+delimiter)
+			lines = lines.replace(delimiter+delimiter,delimiter+"NA"+delimiter)
+			lines = lines.replace(delimiter+"\n",delimiter+"NA")
 			lines = lines.split(delimiter)
 			if flag == False:
 				flag = True
@@ -16,7 +19,10 @@ def read_csv(fileName,delimiter=","):
 					data["columns"].append(ele)
 					i += 1
 			else:
-				data["matrix"].append(np.array([i.rstrip() for i in lines]))
+				mat = [i.rstrip() for i in lines]
+				lengthMissing = len(data["columns"]) - len(mat)
+				mat = mat + ['NA']*lengthMissing
+				data["matrix"].append(np.array(mat))
 	return data
 	
 def merge_data(dataToMerge, ID):
@@ -48,7 +54,7 @@ def merge_data(dataToMerge, ID):
 			j += 1
 		rowIndices.append(rowIndex)
 	for data,indices in zip(dataToMerge,rowIndices):
-		IDIndex = data["attributes"]
+		#IDIndex = data["attributes"]
 		toAdd = []
 		i = 0
 		for attr in data["columns"]:
@@ -62,16 +68,28 @@ def merge_data(dataToMerge, ID):
 		for existingID in IDExistMaster:
 			indexOfId = masterRowIndex[existingID]
 			mergedData["matrix"][indexOfId] = mergedData["matrix"][indexOfId] + list(np.array(data["matrix"][indices[existingID]])[toAdd])
+	#print("IDExistMaster:")
+	#print([i[0] for i in mergedData["matrix"]])
+	#input()
 	return mergedData
 				
-def get_subset(data,attributes,remove = False, indices = True):
+def get_subset(data,attributes,remove = False, indices = True, value = None):
 	newData = {"matrix": [], "attributes": {}, "columns": []}
 	if indices == True:
 		if remove == True:
 			attributes = [attr for attr in data["columns"] if data["attributes"][attr] not in attributes]
 		for rows in data["matrix"]:
-			newRow = rows[attributes]
-			newData["matrix"].append(newRow)
+			flag = True
+			newRow = []
+			for i in rows[attributes]:
+				if i == value:
+					flag = False
+					break
+				else:
+					newRow.append(i)
+			#newRow = [i for i in rows[attributes] if i != value]
+			if flag == True:
+				newData["matrix"].append(newRow)
 		j = 0
 		for attr in attributes:
 			newData["columns"].append(data["columns"][attr])
@@ -81,8 +99,18 @@ def get_subset(data,attributes,remove = False, indices = True):
 		if remove == True:
 			attributes = [attr for attr in data["columns"] if attr not in attributes]
 		for rows in data["matrix"]:
-			newRow = [rows[data["attributes"][attr]] for attr in attributes]
-			newData["matrix"].append(newRow)
+			flag = True
+			newRow = []
+			for attr in attributes:
+				index = data["attributes"][attr]
+				if rows[index] == value:
+					flag = False
+					break
+				else:
+					newRow.append(rows[index])
+			#newRow = [rows[data["attributes"][attr]] for attr in attributes if rows[data["attributes"][attr]] != value]
+			if flag == True:
+				newData["matrix"].append(newRow)
 		j = 0
 		for attr in attributes:
 			newData["columns"].append(attr)
