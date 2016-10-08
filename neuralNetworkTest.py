@@ -3,7 +3,6 @@ import neuralNetwork as nn
 import numpy as np
 import random as rand
 import itertools
-import matplotlib.pyplot as plt
 import time
 
 def binarize(X,flag = True):
