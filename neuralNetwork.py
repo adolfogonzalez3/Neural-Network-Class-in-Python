@@ -23,13 +23,14 @@ class neuralNet:
 		i = 1
 		# create each layer of the neural network
 		for lvl in level[1:]:
-			#wght = tf.Variable(tf.random_normal([left,lvl],0,1),name=('wght'+str(i)))
+			#wght = tf.Variable(tf.random_normal([left,lvl],1,1),name=('wght'+str(i)))
 			wght = tf.Variable(tf.zeros([left,lvl]),name=('wght'+str(i)))
 			#bia = tf.Variable(tf.random_normal([lvl],0,1),name=('bias'+str(i)))
-			bia = tf.Variable(tf.zeros([lvl]),name=('bias'+str(i)))
-			self.y = tf.sigmoid(tf.matmul(self.y,wght)+bia,name=('sigmoid'+str(i)))
 			keep_prob = tf.placeholder(tf.float32)
 			drop = tf.nn.dropout(wght,keep_prob)
+			bia = tf.Variable(tf.zeros([lvl]),name=('bias'+str(i)))
+			#self.y = tf.sigmoid(tf.matmul(self.y,wght)+bia,name=('sigmoid'+str(i)))
+			self.y = tf.sigmoid(tf.matmul(self.y,drop)+bia,name=('sigmoid'+str(i)))
 			self.dropoutProbList.append(keep_prob)
 			self.weights.append(wght)
 			self.bias.append(bia)
@@ -68,7 +69,7 @@ class neuralNet:
 			dictionary[dr] = dp
 		# does a training run
 		for i in range(epochs):
-			self.sess.run([self.train_step,self.y,self.cross_entropy,self.accuracy],feed_dict=dictionary)[1:]
+			self.sess.run([self.train_step,self.y,self.cross_entropy,self.accuracy],feed_dict=dictionary)
 	def run(self,x,y,filt = None,dropoutProb = None):
 		if dropoutProb == None:
 			dropoutProb = [1]*len(self.shape)
@@ -87,7 +88,7 @@ class neuralNet:
 		#self.restore(self.sess,"sess.ckpt")
 		self.sess.run(self.init)
 	def get_weights(self):
-		return self.sess.run([self.weights[0]])
+		return self.sess.run([*self.weights])
 		
 		
 		

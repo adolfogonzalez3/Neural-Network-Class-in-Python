@@ -16,6 +16,13 @@ def binarize(X,flag = True):
 	return newCol
 
 def min_max(X):
+	X = np.array(X)
+	xmin = X.min(axis=0)
+	xmax = X.max(axis=0)
+	tmp = (X - xmin)
+	return (tmp/(xmax - xmin))
+
+def min_max2(X):
 	if len(np.shape(X)) > 1:
 		mat = []
 		X = np.transpose(X)
@@ -88,7 +95,7 @@ def remove_missing_rows(X,Y):
 def run_CV2(X,Y,machine,epochs,experiments=1,CVFolds=10):
 	results = {"accuracy":[[] for i in range(len(epochs))]}
 	for exper in range(experiments):
-		indices = [i for i in range(len(genes))]
+		indices = [i for i in range(len(X))]
 		rand.shuffle(indices)
 		X = [X[index] for index in indices]
 		Y = [Y[index] for index in indices]
@@ -106,8 +113,12 @@ def run_CV2(X,Y,machine,epochs,experiments=1,CVFolds=10):
 				machine["training_run"](train["X"],train["Y"],ep)
 				resultsPerExper["accuracy"][ind].append(machine["test_run"](testX,testY)*100)
 				ind += 1
+		#print(resultsPerExper["accuracy"])
+		#input()
 		for ind in range(len(epochs)):
 			results["accuracy"][ind].append(np.mean(resultsPerExper["accuracy"][ind]))
+	print(machine["print"]())
+	input()
 	return {"accuracy":results["accuracy"]}
 
 def get_dataSet(drugIndex):
@@ -127,40 +138,47 @@ def get_dataSet(drugIndex):
 	cellLine = dp.get_subset(merged,[cellLineDrugs[1]],indices = False,value='NA')
 	return [[float(i) for i in x[1:]] for x in summary["matrix"]],[float(y[0]) for y in cellLine["matrix"]]
 
-with open("results.csv","w") as csv:
-	csv.write("Input nodes = 56,output node = 1\n")
-	for drug in range(5):
-		print(drug)
-		genes, drugEffectiveness = get_dataSet(drug)
-		drugEffectiveness = binarize(drugEffectiveness)
-		genes = min_max(genes)
-		csv.write("Drug: " + str(drug + 1) + "\n")
-		csv.write("Number of Cell Lines = " + str(len(drugEffectiveness)) + "\n")
-		epochs = [100]*10
-		begin = time.clock()
-		neuralNet = nn.neuralNet([len(genes[0]),1])
-		machine = {"training_run":lambda x,y,e: neuralNet.training_run(x,y,epochs=e),"test_run":lambda x,y: neuralNet.run(x,y)[1],"reset":neuralNet.reset}
-		results = run_CV2(genes,drugEffectiveness,machine,CVFolds = 10,experiments=10,epochs=epochs)
-		end = time.clock()
-		csv.write("Time elapsed: " + str(end-begin) + "\n")
-		csv.write("Epochs,")
-		for i in range(len(epochs)):
-			csv.write(str((i+1)*epochs[0]))
-			if i != (len(epochs) - 1):
-				csv.write(",")
-		csv.write("\nAccuracy,")
-		for acc in results["accuracy"]:
-			csv.write(str(np.mean(acc)))
-			if acc is not results["accuracy"][-1]:
-				csv.write(",")
-		csv.write("\nStd,")
-		for sd in results["accuracy"]:
-			csv.write(str(np.std(sd)))
-			if sd is not results["accuracy"][-1]:
-				csv.write(",")
-		csv.write("\n")
+def main():
+	shape = [55,20,1]
+	dropoutProbs = [1,.5,1]
+	epochs = [1000]*5
+	with open("results.csv","w") as csv:
+		csv.write("Neural Network shape: " + str(shape) + "\n")
+		csv.write("Dropout Probabilities: " + str(dropoutProbs) + "\n")
+		for drug in range(1):
+			print(drug)
+			genes, drugEffectiveness = get_dataSet(drug)
+			drugEffectiveness = binarize(drugEffectiveness)
+			genes = min_max(genes)
+			csv.write("Drug: " + str(drug + 1) + "\n")
+			csv.write("Number of Cell Lines = " + str(len(drugEffectiveness)) + "\n")
+			begin = time.clock()
+			neuralNet = nn.neuralNet(shape)
+			machine = {"training_run":lambda x,y,e: neuralNet.training_run(x,y,epochs=e,dropoutProb=dropoutProbs)
+						,"test_run":lambda x,y: neuralNet.run(x,y)[1],"reset":neuralNet.reset,"print":neuralNet.get_weights}
+			results = run_CV2(genes,drugEffectiveness,machine,CVFolds = 10,experiments=10,epochs=epochs)
+			end = time.clock()
+			csv.write("Time elapsed: " + str(end-begin) + "\n")
+			csv.write("Epochs,")
+			totalEpochs = 0
+			for i in range(len(epochs)):
+				totalEpochs += epochs[i]
+				csv.write(str(totalEpochs))
+				if i != (len(epochs) - 1):
+					csv.write(",")
+			csv.write("\nAccuracy,")
+			for acc in results["accuracy"]:
+				csv.write(str(np.mean(acc)))
+				if acc is not results["accuracy"][-1]:
+					csv.write(",")
+			csv.write("\nStd,")
+			for sd in results["accuracy"]:
+				csv.write(str(np.std(sd)))
+				if sd is not results["accuracy"][-1]:
+					csv.write(",")
+			csv.write("\n")
 
-
+main()
 
 
 
