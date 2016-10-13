@@ -30,12 +30,14 @@ def merge_data(dataToMerge, ID):
 	masterRowIndex = {}
 	rowIndices = []
 	IDExistMaster = []
-	for rows in dataToMerge[0]["matrix"]:
-		IDExistMaster.append(rows[dataToMerge[0]["attributes"][ID]])
+	#for rows in dataToMerge[0]["matrix"]:
+	#	IDExistMaster.append(rows[dataToMerge[0]["attributes"][ID]])
+	IDExistMaster = [rows[dataToMerge[0]["attributes"][ID]] for rows in dataToMerge[0]["matrix"]]
 	for data in dataToMerge[1:]:
-		IDExist = []
-		for rows in data["matrix"]:
-			IDExist.append(rows[data["attributes"][ID]])
+		#IDExist = []
+		#for rows in data["matrix"]:
+		#	IDExist.append(rows[data["attributes"][ID]])
+		IDExist = [rows[data["attributes"][ID]] for rows in data["matrix"]]
 		IDExistMaster = [existingID for existingID in IDExistMaster if existingID in IDExist]
 	j = 0
 	for i in IDExistMaster:
@@ -124,13 +126,16 @@ def create_dataset(X,Y,numberOfFolds):
 	indices = range(len(Y))
 	sampleSize = int(len(Y)/numberOfFolds)
 	for folds in range(numberOfFolds):
-		if folds != numberOfFolds-1:
-			setIndices = rand.sample(indices,sampleSize)
-			indices = [index for index in indices if index not in setIndices]
-		else:
-			setIndices = indices
-		setsX.append(np.array(X)[setIndices])
-		setsY.append(np.array(Y)[setIndices])
+		#if folds != numberOfFolds-1:
+		setIndices = rand.sample(indices,sampleSize)
+		indices = [index for index in indices if index not in setIndices]
+		#else:
+		#	setIndices = indices
+		setsX.append(list(np.array(X)[setIndices]))
+		setsY.append(list(np.array(Y)[setIndices]))
+	for setX,setY, index in zip(setsX,setsY,indices):
+		setX.append(np.array(X)[index])
+		setY.append(np.array(Y)[index])
 	return setsX,setsY
 		
 			

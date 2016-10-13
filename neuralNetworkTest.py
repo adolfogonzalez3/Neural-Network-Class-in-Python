@@ -7,12 +7,12 @@ import time
 
 def binarize(X,flag = True):
 	mean = np.mean(X)
-	newCol = []
-	for c in X:
-		if mean > c:
-			newCol.append(0)
-		else:
-			newCol.append(1)
+	newCol = [0 if mean > c else 1 for c in X]
+	#for c in X:
+	#	if mean > c:
+	#		newCol.append(0)
+	#	else:
+	#		newCol.append(1)
 	return newCol
 
 def min_max(X):
@@ -21,30 +21,6 @@ def min_max(X):
 	xmax = X.max(axis=0)
 	tmp = (X - xmin)
 	return (tmp/(xmax - xmin))
-
-def min_max2(X):
-	if len(np.shape(X)) > 1:
-		mat = []
-		X = np.transpose(X)
-		for col in X:
-			newCol = []
-			mini = min(col)
-			maxi = max(col)
-			for ele in col:
-				val = ele - mini
-				val = val/(maxi-mini)
-				newCol.append(val)
-			mat.append(newCol)
-		return np.transpose(mat)
-	else:
-		mini = min(X)
-		maxi = max(X)
-		newCol = []
-		for ele in X:
-			val = ele = mini
-			val = val/(maxi-mini)
-			newCol.append(val)
-		return newCol
 # this function makes the filters for the patients
 # a filter is a list of 1's and 0's
 # example: drug effectiveness = {0.2,0.6,NA} filter = {1,1,0}
@@ -92,7 +68,7 @@ def remove_missing_rows(X,Y):
 			newX.append(x)
 			newY.append(y)
 	return newX,newY
-def run_CV2(X,Y,machine,epochs,experiments=1,CVFolds=10):
+def run_CV(X,Y,machine,epochs,experiments=1,CVFolds=10):
 	results = {"accuracy":[[] for i in range(len(epochs))]}
 	for exper in range(experiments):
 		indices = [i for i in range(len(X))]
@@ -113,12 +89,8 @@ def run_CV2(X,Y,machine,epochs,experiments=1,CVFolds=10):
 				machine["training_run"](train["X"],train["Y"],ep)
 				resultsPerExper["accuracy"][ind].append(machine["test_run"](testX,testY)*100)
 				ind += 1
-		#print(resultsPerExper["accuracy"])
-		#input()
 		for ind in range(len(epochs)):
 			results["accuracy"][ind].append(np.mean(resultsPerExper["accuracy"][ind]))
-	print(machine["print"]())
-	input()
 	return {"accuracy":results["accuracy"]}
 
 def get_dataSet(drugIndex):
@@ -139,44 +111,42 @@ def get_dataSet(drugIndex):
 	return [[float(i) for i in x[1:]] for x in summary["matrix"]],[float(y[0]) for y in cellLine["matrix"]]
 
 def main():
-	shape = [55,20,1]
-	dropoutProbs = [1,.5,1]
-	epochs = [1000]*5
+	shape = [55,150,150,1]#[55,20,20,1]
+	dropoutProbs = [.6,.6,1]#[.6,.6,1]
+	epochs = [100000]
+	drugAcc = []
+	Drugs = range(1)
+	begin = time.clock()
+	neuralNet = nn.neuralNet(shape)
+	machine = {"training_run":lambda x,y,e: neuralNet.training_run(x,y,epochs=e,dropoutProb=dropoutProbs)
+				,"test_run":lambda x,y: neuralNet.run(x,y)[1],"reset":neuralNet.reset,"print":neuralNet.get_weights}
+	for drug in Drugs:#[Drugs]:
+		print(drug)
+		genes, drugEffectiveness = get_dataSet(drug)
+		drugEffectiveness = binarize(drugEffectiveness)
+		#genes = min_max(genes)
+		results = run_CV(genes,drugEffectiveness,machine,CVFolds = 10,experiments=1,epochs=epochs)
+		drugAcc.append(np.mean(results["accuracy"][-1]))
+	#drugAcc = [run_CV2(genes,drugEffectiveness,machine,CV
 	with open("results.csv","w") as csv:
-		csv.write("Neural Network shape: " + str(shape) + "\n")
-		csv.write("Dropout Probabilities: " + str(dropoutProbs) + "\n")
-		for drug in range(1):
-			print(drug)
-			genes, drugEffectiveness = get_dataSet(drug)
-			drugEffectiveness = binarize(drugEffectiveness)
-			genes = min_max(genes)
-			csv.write("Drug: " + str(drug + 1) + "\n")
-			csv.write("Number of Cell Lines = " + str(len(drugEffectiveness)) + "\n")
-			begin = time.clock()
-			neuralNet = nn.neuralNet(shape)
-			machine = {"training_run":lambda x,y,e: neuralNet.training_run(x,y,epochs=e,dropoutProb=dropoutProbs)
-						,"test_run":lambda x,y: neuralNet.run(x,y)[1],"reset":neuralNet.reset,"print":neuralNet.get_weights}
-			results = run_CV2(genes,drugEffectiveness,machine,CVFolds = 10,experiments=10,epochs=epochs)
-			end = time.clock()
-			csv.write("Time elapsed: " + str(end-begin) + "\n")
-			csv.write("Epochs,")
-			totalEpochs = 0
-			for i in range(len(epochs)):
-				totalEpochs += epochs[i]
-				csv.write(str(totalEpochs))
-				if i != (len(epochs) - 1):
-					csv.write(",")
-			csv.write("\nAccuracy,")
-			for acc in results["accuracy"]:
-				csv.write(str(np.mean(acc)))
-				if acc is not results["accuracy"][-1]:
-					csv.write(",")
-			csv.write("\nStd,")
-			for sd in results["accuracy"]:
-				csv.write(str(np.std(sd)))
-				if sd is not results["accuracy"][-1]:
-					csv.write(",")
-			csv.write("\n")
+		csv.write("Shape," + ":".join([str(i) for i in shape]) + "\n")
+		csv.write("Epochs," + str(epochs) + "\n")
+		csv.write("Dropout?," + str(all([i == 1 for i in dropoutProbs])) + "\n")
+		csv.write("Dropout Probs," + ":".join([str(i) for i in dropoutProbs]) + "\n")
+		
+		for i in Drugs:
+			csv.write("Drug " + str(i+1))
+			if i != (len(Drugs)-1):
+				csv.write(",")
+		csv.write("\n")
+		for acc in drugAcc:
+			csv.write(str(acc))
+			if acc is not drugAcc[-1]:
+				csv.write(",")
+		csv.write("\n")
+	end = time.clock()
+	print("Time taken: " + str(end-begin))
+	print("Mean: " + str(np.mean(drugAcc)))
 
 main()
 

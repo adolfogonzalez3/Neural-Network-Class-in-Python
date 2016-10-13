@@ -31,6 +31,7 @@ class neuralNet:
 			bia = tf.Variable(tf.zeros([lvl]),name=('bias'+str(i)))
 			#self.y = tf.sigmoid(tf.matmul(self.y,wght)+bia,name=('sigmoid'+str(i)))
 			self.y = tf.sigmoid(tf.matmul(self.y,drop)+bia,name=('sigmoid'+str(i)))
+			#self.y = tf.nn.relu(tf.matmul(self.y,drop)+bia,name=('sigmoid'+str(i)))
 			self.dropoutProbList.append(keep_prob)
 			self.weights.append(wght)
 			self.bias.append(bia)
@@ -45,7 +46,7 @@ class neuralNet:
 		# by subtracting the two values 			( 0-0 = 0, 1-1=0 ) same
 		# and then adding all the incorrect values	( 0-1 = -1, 1-0=1) different
 		self.cross_entropy = tf.reduce_mean(tf.reduce_sum(abs(self.y_-self.y),reduction_indices=[1]))
-		self.train_step = tf.train.GradientDescentOptimizer(0.5).minimize(self.cross_entropy)
+		self.train_step = tf.train.GradientDescentOptimizer(0.01).minimize(self.cross_entropy)
 		correct_prediction = tf.equal(self.y_,tf.round(self.y))
 		self.accuracy = tf.reduce_mean(tf.cast(correct_prediction,tf.float32))
 		self.init = tf.initialize_all_variables()
@@ -67,9 +68,11 @@ class neuralNet:
 		dictionary = {self.input: x, self.y_: y, self.filter: filt}
 		for dr,dp in zip(self.dropoutProbList,dropoutProb):
 			dictionary[dr] = dp
+		#[dictionary[dr] = dp for dr,dp in zip(self.dropoutProbList,dropoutProb)]
 		# does a training run
-		for i in range(epochs):
-			self.sess.run([self.train_step,self.y,self.cross_entropy,self.accuracy],feed_dict=dictionary)
+		#for i in range(epochs):
+		#	self.sess.run([self.train_step,self.y,self.cross_entropy,self.accuracy],feed_dict=dictionary)
+		[self.sess.run([self.train_step,self.y,self.cross_entropy,self.accuracy],feed_dict=dictionary) for i in range(epochs)]
 	def run(self,x,y,filt = None,dropoutProb = None):
 		if dropoutProb == None:
 			dropoutProb = [1]*len(self.shape)
