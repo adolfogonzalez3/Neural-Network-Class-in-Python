@@ -7,7 +7,7 @@ import numpy as np
 # dropoutProb is the probability that a node is dropped for each level
 # ex. a shape of [5, 2, 1] may have a dropoutProb of [ .6, .8, .5 ]
 class neuralNet:
-	def	__init__(self,level):
+	def	__init__(self,level,learningRate = 0.1):
 		self.shape = level
 		# input is the patient's genes that are given to the neural network
 		self.input = tf.placeholder(tf.float32,[None,level[0]],name='Input')
@@ -46,7 +46,7 @@ class neuralNet:
 		# by subtracting the two values 			( 0-0 = 0, 1-1=0 ) same
 		# and then adding all the incorrect values	( 0-1 = -1, 1-0=1) different
 		self.cross_entropy = tf.reduce_mean(tf.reduce_sum(abs(self.y_-self.y),reduction_indices=[1]))
-		self.train_step = tf.train.GradientDescentOptimizer(0.01).minimize(self.cross_entropy)
+		self.train_step = tf.train.GradientDescentOptimizer(learningRate).minimize(self.cross_entropy)
 		correct_prediction = tf.equal(self.y_,tf.round(self.y))
 		self.accuracy = tf.reduce_mean(tf.cast(correct_prediction,tf.float32))
 		self.init = tf.initialize_all_variables()
@@ -72,7 +72,7 @@ class neuralNet:
 		# does a training run
 		#for i in range(epochs):
 		#	self.sess.run([self.train_step,self.y,self.cross_entropy,self.accuracy],feed_dict=dictionary)
-		[self.sess.run([self.train_step,self.y,self.cross_entropy,self.accuracy],feed_dict=dictionary) for i in range(epochs)]
+		return [self.sess.run([self.train_step,self.y,self.cross_entropy,self.accuracy],feed_dict=dictionary)[2] for i in range(epochs)]
 	def run(self,x,y,filt = None,dropoutProb = None):
 		if dropoutProb == None:
 			dropoutProb = [1]*len(self.shape)

@@ -23,20 +23,15 @@ def read_csv(fileName,delimiter=","):
 				lengthMissing = len(data["columns"]) - len(mat)
 				mat = mat + ['NA']*lengthMissing
 				data["matrix"].append(np.array(mat))
+	data["matrix"] = np.array(data["matrix"])
 	return data
 	
 def merge_data(dataToMerge, ID):
 	mergedData = {"matrix":[], "attributes": {}, "columns": []}
 	masterRowIndex = {}
 	rowIndices = []
-	IDExistMaster = []
-	#for rows in dataToMerge[0]["matrix"]:
-	#	IDExistMaster.append(rows[dataToMerge[0]["attributes"][ID]])
 	IDExistMaster = [rows[dataToMerge[0]["attributes"][ID]] for rows in dataToMerge[0]["matrix"]]
 	for data in dataToMerge[1:]:
-		#IDExist = []
-		#for rows in data["matrix"]:
-		#	IDExist.append(rows[data["attributes"][ID]])
 		IDExist = [rows[data["attributes"][ID]] for rows in data["matrix"]]
 		IDExistMaster = [existingID for existingID in IDExistMaster if existingID in IDExist]
 	j = 0
@@ -70,9 +65,6 @@ def merge_data(dataToMerge, ID):
 		for existingID in IDExistMaster:
 			indexOfId = masterRowIndex[existingID]
 			mergedData["matrix"][indexOfId] = mergedData["matrix"][indexOfId] + list(np.array(data["matrix"][indices[existingID]])[toAdd])
-	#print("IDExistMaster:")
-	#print([i[0] for i in mergedData["matrix"]])
-	#input()
 	return mergedData
 				
 def get_subset(data,attributes,remove = False, indices = True, value = None):
