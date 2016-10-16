@@ -1,14 +1,32 @@
 import numpy as np
 import random as rand
 
-def read_csv(fileName,delimiter=","):
+def separate_file(fileName,newName,indices,axis=0,delimiter=",",newDelimiter=",",transpose = False):
+	matrix = []
+	with open(fileName,"rt") as csv:
+		for line,lineNumber in zip(csv,(i for i in range(1000000))):
+			line = np.array(line.split(delimiter))
+			if axis == 0:
+				matrix.append([line[index].rstrip() for index in indices])
+			else:
+				if lineNumber in indices:
+					matrix.append([ele.rstrip() for ele in line])
+	if transpose == True:
+		matrix = np.transpose(matrix)
+	with open(newName,"w") as wrt:
+		for line in matrix:
+			wrt.write(newDelimiter.join(line) + "\n")
+	
+
+def read_csv(fileName,delimiter=",",missing=False):
 	data = {"matrix": [], "attributes": {}, "columns": []}
 	with open(fileName,"rt") as csv:
 		flag = False
 		for lines in csv:
-			lines = lines.replace(delimiter+delimiter,delimiter+"NA"+delimiter)
-			lines = lines.replace(delimiter+delimiter,delimiter+"NA"+delimiter)
-			lines = lines.replace(delimiter+"\n",delimiter+"NA")
+			if missing == False:
+				lines = lines.replace(delimiter+delimiter,delimiter+"NA"+delimiter)
+				lines = lines.replace(delimiter+delimiter,delimiter+"NA"+delimiter)
+				lines = lines.replace(delimiter+"\n",delimiter+"NA")
 			lines = lines.split(delimiter)
 			if flag == False:
 				flag = True
@@ -25,7 +43,7 @@ def read_csv(fileName,delimiter=","):
 				data["matrix"].append(np.array(mat))
 	data["matrix"] = np.array(data["matrix"])
 	return data
-	
+
 def merge_data(dataToMerge, ID):
 	mergedData = {"matrix":[], "attributes": {}, "columns": []}
 	masterRowIndex = {}
@@ -66,7 +84,29 @@ def merge_data(dataToMerge, ID):
 			indexOfId = masterRowIndex[existingID]
 			mergedData["matrix"][indexOfId] = mergedData["matrix"][indexOfId] + list(np.array(data["matrix"][indices[existingID]])[toAdd])
 	return mergedData
+
+def select(data,selected):
+	newData = {"matrix": [], "attributes": {}, "columns": []}
+	for row in data["matrix"]:
+		newRow = []
+		flag = True
+		for ele,col in zip(row,data["columns"]):
+			values = selected.get(col)
+			if values != None:
+				if ele in values:
+					newRow.append(ele)
+				else:
+					flag = False
+					break
+			else:
+				newRow.append(ele)
+		if flag == True:
+			newData["matrix"].append(newRow)
+	newData["attributes"] = data["attributes"]
+	newData["columns"] = data["columns"]
+	return newData
 				
+
 def get_subset(data,attributes,remove = False, indices = True, value = None):
 	newData = {"matrix": [], "attributes": {}, "columns": []}
 	if indices == True:
@@ -130,9 +170,7 @@ def create_dataset(X,Y,numberOfFolds):
 		setY.append(np.array(Y)[index])
 	return setsX,setsY
 		
-			
-			
-			
+
 			
 			
 			
