@@ -5,60 +5,9 @@ import random as rand
 import itertools
 import time
 import matplotlib.pyplot as plt
+import preprocessing as pp
 
-def binarize(X):
-	if len(np.shape(X)) > 1:
-		mean = [np.mean(x) for x in np.transpose(X)]
-		newCol = np.transpose([[0 if m > c else 1 for c in col] for col,m in zip(np.transpose(X),mean)])
-	else:
-		mean = np.mean(X)
-		newCol = [0 if mean > c else 1 for c in X]
-	return newCol
 
-def min_max(X):
-	X = np.array(X)
-	xmin = X.min(axis=0)
-	xmax = X.max(axis=0)
-	tmp = (X - xmin)
-	return (tmp/(xmax - xmin))
-# this function makes the filters for the patients
-# a filter is a list of 1's and 0's
-# example: drug effectiveness = {0.2,0.6,NA} filter = {1,1,0}
-def make_filter(x):
-	filt = []
-	for lab in x:
-		newFilter = []
-		for ele in lab:
-			if ele == None:
-				newFilter.append(0)
-			else:
-				newFilter.append(1)
-		filt.append(newFilter)
-	return filt
-# changes all values of {-1,0,NA} to 0 
-# changes all values of {1} to 1
-def fix_labels(X,Y,remove="NA"):
-	newX = []
-	newY = []
-	for x,y in zip(X,Y):
-		if y != remove:
-			newX.append(x)
-			newY.append(float(y))
-	return np.array(newX),np.array(newY)
-	
-
-def remove_missing_rows(X,Y):
-	newX = []
-	newY = []
-	for x,y in zip(X,Y):
-		try:
-			y = float(y)
-		except (ValueError, TypeError):
-			y = None
-		if y != None:
-			newX.append(x)
-			newY.append(y)
-	return newX,newY
 def run_CV(X,Y,machine,epochs,experiments=1,CVFolds=10):
 	results = {"accuracy":[[] for i in range(len(epochs))]}
 	errorHist = []
@@ -93,7 +42,7 @@ def get_dataSet():
 	attr = [1] + [i for i in range(8,33)]
 	cellLine = dp.read_csv("Cell.Line.Database.dkim.v1.0.csv",'@')
 	cellLine = dp.get_subset(cellLine, attr)
-	cellLine = dp.get_subset(cellLine,["Cell Line"] + cellLine["columns"][1:],indices = False)#,value='NA')
+	cellLine = dp.get_subset(cellLine,["Cell Line"] + cellLine["columns"][1:],indices = False)#,value='')
 	summary1 = dp.read_csv("Summary_P1_UTA.csv")
 	summary2 = dp.read_csv("Summary_P2_UTA.csv")
 	summary3 = dp.read_csv("Summary_P3_UTA.csv")
@@ -113,64 +62,38 @@ def fun(x,y):
 	return newX,newY
 
 def main():
-	shape = [55,50,50,1]#[55,20,20,1]
-	dropoutProbs = [.5,.5,1]#[.6,.6,1]
-	epochs = [100]
-	drugAcc = []
-	Drugs = [1]#range(25)
+	X, Y = pp.get_dataset()
+	X = pp.min_max(X)#[:,[2]]
+	Y = pp.binarize(Y)
+	rank = pp.rank_genes(X,Y)[:50]
+	X = X[:,[int(i) for i in rank]]
+	print(np.shape(X))
+	print(np.shape(Y))
+	size = int(len(X)/2)
+	testX = X[-size:]
+	testY = Y[-size:]
+	trainX = X[:-size]
+	trainY = Y[:-size]
+	shape = [np.shape(X)[1],np.shape(Y)[1]]#[55,20,20,1]
+	dropoutProbs = [1,1,1]#[.6,.6,1]
+	epochs = [2000]
 	begin = time.clock()
-	neuralNet = nn.neuralNet(shape,learningRate=0.01)
+	neuralNet = nn.neuralNet(shape,learningRate=0.1,
+		activations=["sigmoid"],lossFunction="squared_mean")
 	machine = {"training_run":lambda x,y,e: neuralNet.training_run(x,y,epochs=e,dropoutProb=dropoutProbs)
 				,"test_run":lambda x,y: neuralNet.run(x,y)[1],"reset":neuralNet.reset,"print":neuralNet.get_weights}
-	genes, drugEffectiveness = get_dataSet()
-	#print(drugEffectiveness)
-	#print(np.shape(drugEffectiveness))
-	#input()
-	#print(np.shape(genes))
-	#input()
-	#drugEffectiveness = binarize(drugEffectiveness)
-	genes = min_max(genes)
-	#for drug in Drugs:
-	#	print(drug)
-	#	results = run_CV(genes,drugEffectiveness[:,drug],machine,CVFolds = 10,experiments=1,epochs=epochs)
-	#	drugAcc.append(np.mean(results["accuracy"][-1]))
-	drugAcc = []
-	drugError = []
-	for drug in Drugs:
-		newX, newY = fix_labels(genes,drugEffectiveness[:,drug])
-		newY = np.array(binarize(newY))
-		results = run_CV(newX,newY,machine,CVFolds = 10,experiments=1,epochs=epochs)
-		drugError.append(results["errorHistory"])
-		drugAcc.append(np.mean(results["accuracy"][-1]))
-	for err in drugError:
-		plt.plot(np.arange(1,(len(err)+1),1),err)
-		plt.show()
-	
-	with open("results.csv","w") as csv:
-		csv.write("Shape," + ":".join([str(i) for i in shape]) + "\n")
-		csv.write("Epochs," + str(epochs) + "\n")
-		csv.write("Dropout?," + str(not all([i == 1 for i in dropoutProbs])) + "\n")
-		csv.write("Dropout Probs," + ":".join([str(i) for i in dropoutProbs]) + "\n")
-		
-		for i in Drugs:
-			csv.write("Drug " + str(i+1))
-			if i != (len(Drugs)-1):
-				csv.write(",")
-		csv.write("\n")
-		for acc in drugAcc:
-			csv.write(str(acc))
-			if acc is not drugAcc[-1]:
-				csv.write(",")
-		csv.write("\n")
+	machine["reset"]()
+
+	errorHist = machine["training_run"](trainX,trainY,epochs[0])
 	end = time.clock()
+	accuracies = machine["test_run"](testX,testY)
+	i = 1
+	for acc in accuracies:
+		print("Accuracy " + str(i) + ": " + str(acc))
+		i += 1
+	print("Total Accuracy: " + str(np.mean(accuracies)))
 	print("Time taken: " + str(end-begin))
-	print("Mean: " + str(np.mean(drugAcc)))
+	print("Error History: " + str(errorHist))
+
 
 main()
-
-
-
-
-
-
-
