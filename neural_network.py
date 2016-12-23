@@ -17,6 +17,18 @@ class _ComputationalModel(object):
     - the dropout probabilities
     """
     def __init__(self, model_shape, activation_functions):
+        """The user passes in the shape of the neural network and the
+        activation functions for each level of the network.
+
+        An example of what model_shape and activation_functions describes is
+        if given [4,6,2] as model_shape then
+        -a model with 4 input nodes, 6 hidden nodes, and 2 output nodes
+        if given [sigmoid,sigmoid] as activation_functions then
+        -a sigmoid function will be applied from the input nodes to
+            the hidden nodes
+        -a sigmoid function will be applied from the hidden nodes to the
+            output nodes
+        """
         self.input = tf.placeholder(tf.float32, [None, model_shape[0]], name='Input')
         self.filter = tf.placeholder(tf.float32, [None, model_shape[-1]], name='Mask')
         self.model_shape = model_shape
