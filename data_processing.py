@@ -148,7 +148,7 @@ def fun(i):
     except TypeError:
         return True
 
-def get_dataset(drugsToGrab):
+def get_dataset(drugsToGrab, flag = True):
     matX = pd.read_csv("dataX.csv", sep="\t", header=None)
     matX = matX.transpose()
     header = np.array(matX[:1])
@@ -158,7 +158,7 @@ def get_dataset(drugsToGrab):
     matX = matX[drugs]
     matY = pd.read_csv("dataY.csv", sep=",")
     matY = matY[["COSMIC_ID", "DRUG_ID", "LN_IC50"]]
-    patients = list(set(matY[["COSMIC_ID"]]))
+    #patients = list(set(matY[["COSMIC_ID"]]))
     drugs = np.array(list(set(matY["DRUG_ID"])))[drugsToGrab]
     result = matY[matY["DRUG_ID"] == drugs[0]]
     drugNames = []
@@ -173,6 +173,9 @@ def get_dataset(drugsToGrab):
         drugNames.append(drugName)
         tmp.columns = ["COSMIC_ID", drugName]
         result = pd.merge(result, tmp, on="COSMIC_ID")
+    if flag is False:
+        ID = pd.read_csv("Sorted_Patients_by_Type/BRCA.txt")
+        result = pd.merge(result, ID, on="COSMIC_ID")
     genes = matX.columns[1:]
 
     mat = pd.merge(matX, result, on="COSMIC_ID")

@@ -55,11 +55,17 @@ class _ComputationalModel(object):
         """Returns the shape of computational model"""
         return self.model_shape
 
-    def get_input_output_filter(self):
-        """Returns the input, output, and filter.Very likely that
-        all will be needed at once.
-        """
-        return self.input, self.output, self.filter
+    def get_input(self):
+        """Returns the input"""
+        return self.input
+
+    def get_output(self):
+        """Returns the output"""
+        return self.output
+
+    def get_filter(self):
+        """Returns the filter"""
+        return self.filter
 
     def get_probabiliy_objects(self):
         """Returns a generator that returns an activation object"""
@@ -100,39 +106,38 @@ class NeuralNet(object):
         loss_function - the loss function to use ( can be a function or specify an
                         existing )
         """
-        self.computational_model = _ComputationalModel(model_shape, activation_functions)
+        self.model = _ComputationalModel(model_shape, activation_functions)
         self.output_to_predict = tf.placeholder(tf.float32,
                                                 [None, model_shape[-1]], name='prediction')
-        model_output = self.computational_model.get_input_output_filter()[1]
         if loss_function == "squared_mean":
             self.loss_function = tf.reduce_mean(tf.reduce_sum(tf.square(
-                (model_output-self.output_to_predict)
+                (self.model.get_output()-self.output_to_predict)
                 ), reduction_indices=[1]))
         elif loss_function == "mean_absolute":
             self.loss_function = tf.reduce_mean(tf.reduce_sum(tf.abs(
-                (model_output-self.output_to_predict)
+                (self.model.get_output()-self.output_to_predict)
                 ), reduction_indices=[1]))
         elif loss_function == "hinge_loss":
             self.loss_function = tf.reduce_mean(tf.reduce_sum(tf.abs(
-                (1-model_output*self.output_to_predict)
+                (1-self.model.get_output()*self.output_to_predict)
                 ), reduction_indices=[1]))
         elif loss_function == "cross_entropy":
             self.loss_function = tf.reduce_mean(
                 tf.nn.sigmoid_cross_entropy_with_logits(
-                    model_output,
+                    self.model.get_output(),
                     self.output_to_predict))
-        #self.train_step = tf.train.GradientDescentOptimizer(learningRate).
-        #minimize(self.lossFunction)
+        self.train_step = tf.train.GradientDescentOptimizer(
+            learning_rate).minimize(self.loss_function)
         #self.train_step = tf.train.AdadeltaOptimizer().minimize(self.lossFunction)
         #self.train_step = tf.train.RMSPropOptimizer(learningRate).minimize(self.lossFunction)
         #self.train_step = tf.train.AdamOptimizer().minimize(self.lossFunction)
-        self.train_step = tf.train.MomentumOptimizer(
-            learning_rate, 0.6).minimize(self.loss_function)
+        #self.train_step = tf.train.MomentumOptimizer(
+        #    learning_rate, 0.6).minimize(self.loss_function)
         correct_prediction = tf.equal(self.output_to_predict, tf.round(
-            model_output))
+            self.model.get_output()))
         self.accuracy = tf.reduce_mean(
             tf.cast(correct_prediction, tf.float32), reduction_indices=[0])
-        self.init = tf.initialize_all_variables()
+        self.init = tf.global_variables_initializer()
         self.sess = tf.Session()
         self.sess.run(self.init)
 
@@ -151,13 +156,12 @@ class NeuralNet(object):
 
         Returns the loss of the model for every 10 percent of the epochs
         """
-        model_input, model_output, model_filter = self.computational_model.get_input_output_filter()
-        dropout_probabilities = self.computational_model.get_probabiliy_objects()
+        dropout_probabilities = self.model.get_probabiliy_objects()
         additional_params["number of examples"] = np.shape(nn_input)[0]
         self.__setup_parameters(additional_params)
-        dictionary = {model_input: nn_input,
+        dictionary = {self.model.get_input(): nn_input,
                       self.output_to_predict: expected_output,
-                      model_filter: additional_params["filter"]}
+                      self.model.get_filter(): additional_params["filter"]}
         for dropout_node, dropout_prob in zip(dropout_probabilities,
                                               additional_params["dropout_prob"]):
             dictionary[dropout_node] = dropout_prob
@@ -166,10 +170,10 @@ class NeuralNet(object):
         indices = [range(len(nn_input))]
         for i in range(additional_params["epochs"]):
             rand.shuffle(indices)
-            dictionary[model_input] = nn_input[indices]
+            dictionary[self.model.get_input()] = nn_input[indices]
             dictionary[self.output_to_predict] = expected_output[indices]
             loss = self.sess.run([self.train_step,
-                                  model_output,
+                                  self.model.get_output(),
                                   self.loss_function,
                                   self.accuracy],
                                  feed_dict=dictionary)[2]
@@ -190,32 +194,36 @@ class NeuralNet(object):
         dropout_prob - A list of probabilities that determines the dropout rate
                        of a layer
         """
-        model_input, model_output, model_filter = self.computational_model.get_input_output_filter()
-        dropout_probabilities = self.computational_model.get_probabiliy_objects()
+        dropout_probabilities = self.model.get_probabiliy_objects()
         additional_params["number of examples"] = np.shape(nn_input)[0]
         self.__setup_parameters(additional_params)
 
-        dictionary = {model_input: nn_input,
-                      model_filter: additional_params["filter"],
+        dictionary = {self.model.get_input(): nn_input,
+                      self.model.get_filter(): additional_params["filter"],
                       self.output_to_predict: expected_output}
         for dropout_node, dropout_prob in zip(dropout_probabilities,
                                               additional_params["dropout_prob"]):
             dictionary[dropout_node] = dropout_prob
         # returns a prediction for the patient
-        return self.sess.run([model_output, self.accuracy], feed_dict=dictionary)
+        return self.sess.run([self.model.get_output(), self.accuracy], feed_dict=dictionary)
 
     def reset(self):
         """Resets the weights and bias."""
         self.sess.run(self.init)
+        #self.train_step = tf.train.GradientDescentOptimizer(learningRate).
+        #minimize(self.lossFunction)
+        #self.train_step = tf.train.AdadeltaOptimizer().minimize(self.lossFunction)
+        #self.train_step = tf.train.RMSPropOptimizer(learningRate).minimize(self.lossFunction)
+        #self.train_step = tf.train.AdamOptimizer().minimize(self.lossFunction)
 
     def __setup_parameters(self, parameters):
-        shape = self.computational_model.get_shape()
+        shape = self.model.get_shape()
         if "dropout_prob" not in parameters:
             parameters["dropout_prob"] = [1]*len(shape)
         if "epochs" not in parameters:
             parameters["epochs"] = 1
         if "filter" not in parameters:
             if shape[-1] == 1:
-                parameters["filter"] = [1]*parameters["number of examples"]
+                parameters["filter"] = np.array([[1]*parameters["number of examples"]]).transpose()
             else:
                 parameters["filter"] = [[1]*shape[-1]]*parameters["number of examples"]
