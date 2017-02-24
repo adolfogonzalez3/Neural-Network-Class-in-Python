@@ -139,6 +139,7 @@ def create_dataset(X, Y, numberOfFolds):
         setY.append(np.array(Y)[index])
     return setsX, setsY
 
+
 def fun(i):
     try:
         if math.isnan(i):
@@ -148,35 +149,69 @@ def fun(i):
     except TypeError:
         return True
 
-def get_dataset(drugsToGrab, flag = True):
+def get_datasetX():
     matX = pd.read_csv("dataX.csv", sep="\t", header=None)
     matX = matX.transpose()
     header = np.array(matX[:1])
     matX.columns = header[0]
     matX = matX[2:]
+    total_rows = np.shape(matX)[1]
     drugs = [i for i in np.array(matX.columns) if fun(i)]
     matX = matX[drugs]
+    return matX
+
+def get_datasetY():
     matY = pd.read_csv("dataY.csv", sep=",")
     matY = matY[["COSMIC_ID", "DRUG_ID", "LN_IC50"]]
-    #patients = list(set(matY[["COSMIC_ID"]]))
-    drugs = np.array(list(set(matY["DRUG_ID"])))[drugsToGrab]
-    result = matY[matY["DRUG_ID"] == drugs[0]]
-    drugNames = []
-    drugName = "DRUG_" + str(drugs[0])
-    drugNames.append(drugName)
-    result = result[["COSMIC_ID", "LN_IC50"]]
-    result.columns = ["COSMIC_ID", drugName]
-    for d in drugs[1:]:
-        tmp = matY[matY["DRUG_ID"] == d]
-        tmp = tmp[["COSMIC_ID", "LN_IC50"]]
-        drugName = "DRUG_" + str(d)
-        drugNames.append(drugName)
-        tmp.columns = ["COSMIC_ID", drugName]
-        result = pd.merge(result, tmp, on="COSMIC_ID")
-    if flag is False:
-        ID = pd.read_csv("Sorted_Patients_by_Type/BRCA.txt")
-        result = pd.merge(result, ID, on="COSMIC_ID")
-    genes = matX.columns[1:]
+    matY.COSMIC_ID = [int(i) for i in matY["COSMIC_ID"]]
+    return matY
 
-    mat = pd.merge(matX, result, on="COSMIC_ID")
-    return np.array(mat[genes]), np.array(mat[drugNames])
+def reduce_datasetY_by_drug(drug, matY):
+    drug = np.array(list(set(matY["DRUG_ID"])))[drug]
+    print(drug)
+    result = matY[matY["DRUG_ID"] == drug]
+    return result
+
+def create_matrix_of_sensitivities(matY):
+    cosmic_id = set(matY["COSMIC_ID"])
+    drug_id = set(matY["DRUG_ID"])
+    cosmic_matrix = [[tuple([i[1],i[2]]) for i in np.array(matY) if i[0] == j] for j in cosmic_id]
+    iterator = 0
+    diction = {}
+    print("here")
+    for drug in drug_id:
+        diction.update({drug: iterator})
+        iterator += 1
+    matrix = np.empty([len(cosmic_id),len(drug_id)])
+    matrix.fill(np.NAN)
+    x_index = 0
+    print("there")
+    for cosmic in cosmic_matrix:
+        for drug in cosmic:
+            matrix[x_index][diction[drug[0]]] = drug[1]
+        x_index += 1
+    return matrix, cosmic_id, drug_id
+
+def save_matrix(matrix, cosmic_id, drug_id):
+    with open("matrixY.csv","wt") as csv:
+        csv.write("Cosmic ID," + ",".join([str(i) for i in drug_id]) + "\n")
+        for row, cosmic in zip(matrix,cosmic_id):
+            csv.write(str(cosmic)+",")
+            csv.write(",".join([str(i) for i in row]) + "\n")
+
+
+def combine_datasets(matX, matY, flag=True):
+    if flag is False:
+        ID = pd.read_csv("Sorted_Patients_by_Type/SCLC.txt")
+        matY = pd.merge(matY, ID, on="COSMIC_ID")
+    genes = matX.columns[1:]
+    mat = pd.merge(matX, matY, on="COSMIC_ID")
+    return np.array(mat[genes]), np.array(mat[[matY.columns[2]]])
+
+def combine_datasets2(matX, matY, flag=True):
+    if flag is False:
+        ID = pd.read_csv("Sorted_Patients_by_Type/SCLC.txt")
+        matY = pd.merge(matY, ID, on="COSMIC_ID")
+    genes = matX.columns[1:]
+    mat = pd.merge(matX, matY, on="COSMIC_ID")
+    return mat

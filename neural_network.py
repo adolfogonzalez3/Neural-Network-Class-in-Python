@@ -85,6 +85,9 @@ class _ComputationalModel(object):
         elif activation == "tanh":
             function = tf.tanh(tf.matmul(self.activation_levels[-1],
                                          drop)+bia, name=('sigmoid_'+str(i)))
+        elif activation == "softsign":
+            function = tf.nn.softsign(tf.matmul(self.activation_levels[-1],
+                                         drop)+bia, name=('sigmoid_'+str(i)))
         return function
 
 
@@ -141,7 +144,7 @@ class NeuralNet(object):
         self.sess = tf.Session()
         self.sess.run(self.init)
 
-    def training_run(self, nn_input, expected_output, **additional_params):
+    def training_run(self, nn_input, expected_output, nn_test_input=None, test_expected_output=None, results_file=None, **additional_params):
         """
         Train the neural network.
 
@@ -153,8 +156,6 @@ class NeuralNet(object):
         dropout_prob - A list of probabilities that determines the dropout rate
                        of a layer
         epochs - The number of epochs to train on
-
-        Returns the loss of the model for every 10 percent of the epochs
         """
         dropout_probabilities = self.model.get_probabiliy_objects()
         additional_params["number of examples"] = np.shape(nn_input)[0]
@@ -165,21 +166,34 @@ class NeuralNet(object):
         for dropout_node, dropout_prob in zip(dropout_probabilities,
                                               additional_params["dropout_prob"]):
             dictionary[dropout_node] = dropout_prob
-        to_return = []
-        tenth = int(additional_params["epochs"]/10)
+        loss = []
+        test_acc = []
+        epochs_recorded = []
+        number_of_times_to_collect = 50
+        tenth = int(additional_params["epochs"]/number_of_times_to_collect)
         indices = [range(len(nn_input))]
         for i in range(additional_params["epochs"]):
             rand.shuffle(indices)
             dictionary[self.model.get_input()] = nn_input[indices]
             dictionary[self.output_to_predict] = expected_output[indices]
-            loss = self.sess.run([self.train_step,
+            result = self.sess.run([self.train_step,
                                   self.model.get_output(),
                                   self.loss_function,
                                   self.accuracy],
                                  feed_dict=dictionary)[2]
-            if i%tenth == 0:
-                to_return.append(loss)
-        return to_return
+            if i%tenth == (tenth-1):
+                epochs_recorded.append(i+1)
+                loss.append(result)
+                if nn_test_input is not None and test_expected_output is not None:
+                    test_acc.append(self.run(nn_test_input, test_expected_output)[1])
+
+        if results_file is not None:
+            with open(results_file+".csv","wt") as csv:
+                csv.write("epochs recorded,test accuracy, loss\n")
+                for e,a,l in zip(epochs_recorded,test_acc,loss):
+                    csv.write(str(e)+","+str(a)+","+str(l)+"\n")
+
+        return result
 
     def run(self, nn_input, expected_output, **additional_params):
         """
@@ -215,6 +229,9 @@ class NeuralNet(object):
         #self.train_step = tf.train.AdadeltaOptimizer().minimize(self.lossFunction)
         #self.train_step = tf.train.RMSPropOptimizer(learningRate).minimize(self.lossFunction)
         #self.train_step = tf.train.AdamOptimizer().minimize(self.lossFunction)
+
+    def close(self):
+        self.sess.close()
 
     def __setup_parameters(self, parameters):
         shape = self.model.get_shape()

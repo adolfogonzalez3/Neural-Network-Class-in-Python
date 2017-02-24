@@ -25,6 +25,13 @@ def min_max_data(data):
     data_maximum = data.max(axis=0)
     return (data - data_minimum)/(data_maximum - data_minimum)
 
+def standard_score(data):
+    """Processes the data with the standard score standarization"""
+    data = np.array(data)
+    data_mean = np.mean(data,axis=0)
+    data_std = np.std(data,axis=0)
+    return (data - data_mean)/data_std
+
 def rank_genes(data, labels):
     """Ranks genes by the occurences of one label in respect to another"""
     distr_one_up = np.array([0 for element in range(len(data[0]))])
