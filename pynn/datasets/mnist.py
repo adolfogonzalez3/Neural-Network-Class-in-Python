@@ -19,10 +19,12 @@ MNIST_URLS = {
     "test_labels": f"{MNIST_URL}/t10k-labels-idx1-ubyte.gz"
 }
 
+
 def download(file_name: Path, url_name: str):
     file_name = Path(file_name)
     with urlopen(url_name) as response, file_name.open('wb') as out_file:
         shutil.copyfileobj(response, out_file)
+
 
 def download_mnist(path: Path):
     path.mkdir()
@@ -31,7 +33,7 @@ def download_mnist(path: Path):
     ])
     with ThreadPoolExecutor() as executor:
         list(executor.map(download, paths, urls))
-    #for name, url in MNIST_URLS.items():
+    # for name, url in MNIST_URLS.items():
     #    download(path / f'{name}-ubyte.gz', url)
 
 
@@ -64,6 +66,7 @@ def read_idx(bytefile) -> Matrix2d:
         size *= shpe
     matrix.fromfile(bytefile, size)
     return Matrix2d(matrix, shape[0], size//shape[0])
+
 
 class MnistDataset(Sequence):
     def __init__(self, mnist_path=None, train=True, batch_size=32):

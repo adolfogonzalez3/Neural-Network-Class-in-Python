@@ -8,6 +8,7 @@ from pynn import Network, Matrix2d
 
 from tqdm import tqdm, trange
 
+
 class What:
     def __getitem__(self, idx):
         if isinstance(idx, tuple):
@@ -16,6 +17,7 @@ class What:
             print('Slice:', idx)
         else:
             print(idx)
+
 
 def main():
     train_sets = MnistDataset()
@@ -54,14 +56,12 @@ def main():
             [row.index(max(row)) for row in predictions],
             labels.rows, 1
         )
-        #print(predictions)
-        #print(labels)
+        # print(predictions)
+        # print(labels)
         #print(predictions == labels)
-        #input()
+        # input()
         accuracies.append(sum(labels == predictions))
     print(f'Accuracy: {sum(accuracies) / len(test_sets.labels)}')
-
-
 
 
 if __name__ == '__main__':

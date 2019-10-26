@@ -3,6 +3,7 @@
 from abc import abstractmethod, ABC
 from pynn.matrix2d import Matrix2d
 
+
 class Tensor(ABC):
     def __init__(self, name: str):
         self.name = name

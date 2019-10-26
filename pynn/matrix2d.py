@@ -180,7 +180,7 @@ class Matrix2d:
         if isinstance(other, Matrix2d):
             return Matrix2d(
                 [i-j for i, j in zip(self, other)],
-                 self.rows, self.columns)
+                self.rows, self.columns)
         else:
             return Matrix2d([i-other for i in self], self.rows, self.columns)
 
@@ -188,7 +188,7 @@ class Matrix2d:
         if isinstance(other, Matrix2d):
             return Matrix2d(
                 [i-j for i, j in zip(self, other)],
-                 self.rows, self.columns)
+                self.rows, self.columns)
         else:
             return Matrix2d([other-i for i in self], self.rows, self.columns)
 
@@ -211,7 +211,7 @@ class Matrix2d:
         if isinstance(other, Matrix2d):
             return Matrix2d(
                 [i < j for i, j in zip(self, other)],
-                 self.rows, self.columns)
+                self.rows, self.columns)
         else:
             return Matrix2d([i < other for i in self], self.rows, self.columns)
 
@@ -219,7 +219,7 @@ class Matrix2d:
         if isinstance(other, Matrix2d):
             return Matrix2d(
                 [i <= j for i, j in zip(self, other)],
-                 self.rows, self.columns)
+                self.rows, self.columns)
         else:
             return Matrix2d([i <= other for i in self], self.rows, self.columns)
 
@@ -227,7 +227,7 @@ class Matrix2d:
         if isinstance(other, Matrix2d):
             return Matrix2d(
                 [i == j for i, j in zip(self, other)],
-                 self.rows, self.columns)
+                self.rows, self.columns)
         else:
             return Matrix2d([other == i for i in self], self.rows, self.columns)
 
@@ -235,7 +235,7 @@ class Matrix2d:
         if isinstance(other, Matrix2d):
             return Matrix2d(
                 [i != j for i, j in zip(self, other)],
-                 self.rows, self.columns)
+                self.rows, self.columns)
         else:
             return Matrix2d([other != i for i in self], self.rows, self.columns)
 
@@ -243,7 +243,7 @@ class Matrix2d:
         if isinstance(other, Matrix2d):
             return Matrix2d(
                 [i >= j for i, j in zip(self, other)],
-                 self.rows, self.columns)
+                self.rows, self.columns)
         else:
             return Matrix2d([i >= other for i in self], self.rows, self.columns)
 
@@ -251,7 +251,7 @@ class Matrix2d:
         if isinstance(other, Matrix2d):
             return Matrix2d(
                 [i > j for i, j in zip(self, other)],
-                 self.rows, self.columns)
+                self.rows, self.columns)
         else:
             return Matrix2d([i > other for i in self], self.rows, self.columns)
 

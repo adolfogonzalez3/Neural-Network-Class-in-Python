@@ -4,6 +4,7 @@ import math
 from pynn.tensor import Tensor
 from pynn.matrix2d import Matrix2d
 
+
 class Sigmoid(Tensor):
     def __init__(self, name="Sigmoid"):
         super().__init__(name)

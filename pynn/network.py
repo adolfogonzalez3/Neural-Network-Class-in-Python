@@ -2,6 +2,7 @@
 from pynn.matrix2d import Matrix2d
 from pynn.tensor import Tensor
 
+
 class Network:
     def __init__(self):
         self.tensors = []

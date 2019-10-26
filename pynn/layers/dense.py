@@ -2,6 +2,7 @@
 from pynn.tensor import Tensor
 from pynn.matrix2d import Matrix2d
 
+
 class Dense(Tensor):
     def __init__(self, feed_in: int, feed_out: int, name="Dense"):
         self.value = Matrix2d.random(feed_in, feed_out) * 1e-3 - 5e-3
