@@ -1,0 +1,5 @@
+*.gz
+*.pyc
+*.json
+*.txt
+PKG-INFO
